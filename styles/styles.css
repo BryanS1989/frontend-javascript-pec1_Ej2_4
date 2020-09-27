@@ -111,6 +111,10 @@ body {
     justify-content: center;
 }
 
+p {
+    text-align: center;
+}
+
 p.text {
     margin: 5px 0;
 }
