@@ -1,9 +1,14 @@
 /***************************************************************/
 /*                     GLOBAL CONSTANTS                        */
 /***************************************************************/
+// API key
+const API_KEY = '7d9e5a83fc27579c5a91aebb';
+
 const SELECTED_SEATS = 'selectedSeats';
 const SELECTED_MOVIE_INDEX = 'selectedMovieIndex';
 const SELECTED_MOVIE_PRICE = 'selectedMoviePrice';
+const SELECTED_CURRENCY = 'selectedCurrency';
+const CURRENCY_EXCHANGE_ARRAY = 'currencyExchangeArray';
 
 // get all elements that represents the theater 
 const CONTAINER = document.querySelector('.container');
@@ -14,10 +19,15 @@ const SEATS = document.querySelectorAll('.row .seat:not(.occupied)');
 // Get the counters (Selected seats and total price)
 const COUNT = document.getElementById('count');
 const TOTAL = document.getElementById('total');
+const CURRENCY_TOTAL = document.getElementById('currencyTotal');
 
 // Get movie dropdown menu
 const MOVIE_SELECT = document.getElementById('movie');
 
+// Get currency selector
+const CURRENCY_SELECT = document.getElementById('currency');
+
+const ELEMENT_NODE = 1;
 
 
 /***************************************************************/
@@ -26,6 +36,8 @@ const MOVIE_SELECT = document.getElementById('movie');
 
 // Get the ticket price as a number
 let ticketPrice = parseInt(MOVIE_SELECT.value);
+
+let currencyExchangeArray = null;
 
 //console.log(ticketPrice);
 //console.log(typeof ticketPrice);
@@ -38,14 +50,35 @@ let ticketPrice = parseInt(MOVIE_SELECT.value);
 // Restore all data from Local Storage
 populateUI();
 
-// Recalculate total price and selected seats
-updatedSelectedCount();
-
-
+getAllCurrenciesExchange();
 
 /***************************************************************/
 /*                         FUNCTIONS                           */
 /***************************************************************/
+// API acces
+function getAllCurrenciesExchange(params) {
+    
+    //Get currency exchange array from Local Storage
+    getCurrencyExchange();
+
+    if (currencyExchangeArray === null) {
+        fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${CURRENCY_SELECT.value}`)
+        .then((response) => {
+            response.json()
+                .then((data)=>{
+                    currencyExchangeArray = data.conversion_rates;
+                    
+                    saveCurrencyExchange();
+                });
+        });
+    }
+
+}
+
+function getCurrencyExchange() {
+    currencyExchangeArray = localStorage.getItem(CURRENCY_EXCHANGE_ARRAY);
+}
+
 // Select or deselect a seat
 function selectSeat (event) {
     // Check if a free seat was clicked
@@ -116,8 +149,32 @@ function saveMovieData (movieIndex, moviePrice) {
 
 }
 
+// Save selected currency
+function saveCurrency (currencyIndex) {
+    
+    localStorage.setItem(SELECTED_CURRENCY, currencyIndex);
+
+}
+
+// Save currency exchange
+function saveCurrencyExchange () {
+    
+    localStorage.setItem(CURRENCY_EXCHANGE_ARRAY, currencyExchangeArray);
+
+}
+
 // Get all data from LocalStorage and populate UI
 function populateUI () {
+    
+    updateSelectedSeats();
+
+    generateMovies();
+
+    updateSelectedCurrency();
+
+}
+
+function updateSelectedSeats() {
     
     // get Selected Seats from local storage
     const selectedSeats = JSON.parse(localStorage.getItem(SELECTED_SEATS));
@@ -134,13 +191,57 @@ function populateUI () {
         });
     }
 
+}
+
+// Create movie selector
+function generateMovies() {
+    
+    fetch('./files/movies.json')
+        .then((response) => {
+            response.json()
+                .then((movies) => {
+                    
+                    movies.forEach((movie, index) => {
+
+                        var movieOption = document.createElement("option");
+
+                        movieOption.value = movie.priceEur;
+                        movieOption.innerHTML = `${movie.name} (<span id="price">${movie.priceEur}</span> <span id="currency">${CURRENCY_SELECT.value}</span>)`;
+
+                        MOVIE_SELECT.appendChild(movieOption);
+
+                    });
+
+                    updateMovieAndPrice();
+
+                    //console.log(movies);
+                });
+        });
+
+}
+
+function updateMovieAndPrice() {
+    
+    setMovie();
+
+    setPrice();
+
+}
+
+function setMovie() {
+    
     // Set selected Movie from Local Storage
     const selectedMovieIndex = localStorage.getItem(SELECTED_MOVIE_INDEX);
 
     if (selectedMovieIndex !== null) {
         MOVIE_SELECT.selectedIndex = selectedMovieIndex;
+        ticketPrice = parseInt(MOVIE_SELECT.value);
     }
 
+}
+
+function setPrice() {
+    
     // Get movie price
     const selectedMoviePrice = localStorage.getItem(SELECTED_MOVIE_PRICE) ? 
                                     parseInt(localStorage.getItem(SELECTED_MOVIE_PRICE)) 
@@ -150,6 +251,54 @@ function populateUI () {
         ticketPrice = selectedMoviePrice;
     }
 
+    // Recalculate total price and selected seats
+    updatedSelectedCount();
+
+}
+
+function updateSelectedCurrency() {
+    
+    // Set selected Currency from Local Storage
+    const selectedCurrency = localStorage.getItem(SELECTED_CURRENCY);
+
+    if (selectedCurrency !== null) {
+        CURRENCY_SELECT.selectedIndex = selectedCurrency;
+    }
+
+    updateTotalCurrency();
+}
+
+// Set Currency and price for all movies
+function updateMovieOptions() {
+    
+    var options = MOVIE_SELECT.childNodes;
+    
+    options.forEach(option => {
+        if (option.nodeType === ELEMENT_NODE) {
+            var optionSpans = option.childNodes;
+
+            optionSpans.forEach((span) => {
+                if (span.nodeType === ELEMENT_NODE) {
+                    switch (span.id) {
+                        case "price":
+                            break;
+                        case "currency":
+                            span.innerText = CURRENCY_SELECT.value;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            });
+        }
+    });
+    
+    updateTotalCurrency();
+
+}
+
+function updateTotalCurrency() {
+    CURRENCY_TOTAL.innerText = CURRENCY_SELECT.value;
 }
 
 
@@ -181,3 +330,12 @@ MOVIE_SELECT.addEventListener ('change', (event) => {
     // Update totals
     updatedSelectedCount();
 } );
+
+
+CURRENCY_SELECT.addEventListener('change', (event) => {
+    
+    updateMovieOptions();
+
+    saveCurrency(event.target.selectedIndex);
+
+});
