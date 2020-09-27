@@ -20,6 +20,7 @@ body {
     margin: 20px 0;
 }
 
+.currency-container select,
 .movie-container select {
     background-color: #ffffff;
     border: 0;
