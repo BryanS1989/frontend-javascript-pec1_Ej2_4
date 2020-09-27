@@ -1,0 +1,30 @@
+[
+    {
+        "name": "Avengers: Endgame",
+        "priceEur": 10
+    },
+    {
+        "name": "Joker",
+        "priceEur": 12
+    },
+    {
+        "name": "Toy Story 4",
+        "priceEur": 8
+    },
+    {
+        "name": "The Lion King",
+        "priceEur": 9
+    },
+    {
+        "name": "Tenet",
+        "priceEur": 15
+    },
+    {
+        "name": "Harry Potter and the Deathly Hallows (Pt 1)",
+        "priceEur": 10
+    },
+    {
+        "name": "Harry Potter and the Deathly Hallows (Pt 2)",
+        "priceEur": 10
+    }
+]
