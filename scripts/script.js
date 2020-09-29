@@ -1,3 +1,4 @@
+
 /***************************************************************/
 /*                     GLOBAL CONSTANTS                        */
 /***************************************************************/
@@ -35,31 +36,31 @@ const ELEMENT_NODE = 1;
 /***************************************************************/
 
 // Get the ticket price as a number
-let ticketPrice = parseInt(MOVIE_SELECT.value);
+let ticketPrice = 0;
 
 let currencyExchangeArray = null;
-
-//console.log(ticketPrice);
-//console.log(typeof ticketPrice);
 
 
 
 /***************************************************************/
 /*                       INITIAL ACTIONS                       */
 /***************************************************************/
+// Get all currency exchange from API or LocalStorage
+getAllCurrenciesExchange();
+
 // Restore all data from Local Storage
 populateUI();
 
-getAllCurrenciesExchange();
+
 
 /***************************************************************/
 /*                         FUNCTIONS                           */
 /***************************************************************/
-// API acces
-function getAllCurrenciesExchange(params) {
+// API acces to get currency exchange
+function getAllCurrenciesExchange() {
     
     //Get currency exchange array from Local Storage
-    getCurrencyExchange();
+    currencyExchangeArray =  JSON.parse(localStorage.getItem(CURRENCY_EXCHANGE_ARRAY));
 
     if (currencyExchangeArray === null) {
         fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${CURRENCY_SELECT.value}`)
@@ -75,8 +76,81 @@ function getAllCurrenciesExchange(params) {
 
 }
 
-function getCurrencyExchange() {
-    currencyExchangeArray = localStorage.getItem(CURRENCY_EXCHANGE_ARRAY);
+// Get all data from LocalStorage and populate UI
+function populateUI () {
+    
+    updateSelectedSeats();
+
+    generateMovies();
+
+    updateSelectedCurrency();
+
+}
+
+function updateSelectedSeats() {
+    
+    // get Selected Seats from local storage
+    const selectedSeats = JSON.parse(localStorage.getItem(SELECTED_SEATS));
+
+    // Populate selected seats
+    if (selectedSeats !== null && selectedSeats.length > 0) {
+        SEATS.forEach((seat, index) => {
+            // Check if the index is in selected seats
+            if (selectedSeats.indexOf(index) > -1) {
+                seat.classList.add('selected');
+            }
+        });
+    }
+
+}
+
+// Create movie selector
+function generateMovies() {
+
+    fetch('./files/movies.json')
+        .then((response) => {
+            response.json()
+                .then((movies) => {
+                    
+                    movies.forEach((movie, index) => {
+
+                        var movieOption = document.createElement("option");
+
+                        movieOption.value = movie.priceEur;
+                        movieOption.innerHTML = `${movie.name} 
+                                                (<span id="price">
+                                                    ${(parseInt(movie.priceEur) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2)}
+                                                </span> 
+                                                <span id="currency">
+                                                    ${CURRENCY_SELECT.value}
+                                                </span>)`;
+                        
+                        MOVIE_SELECT.appendChild(movieOption);
+                        
+                    });
+
+                    updateMovieAndPrice();
+
+                }
+            );
+        }
+    );
+}
+
+function updateSelectedCurrency() {
+    
+    // Set selected Currency from Local Storage
+    const selectedCurrency = localStorage.getItem(SELECTED_CURRENCY);
+
+    if (selectedCurrency !== null) {
+        CURRENCY_SELECT.selectedIndex = selectedCurrency;
+    }
+
+    updateTotalCurrency();
+}
+
+function updateTotalCurrency() {
+    CURRENCY_TOTAL.innerText = CURRENCY_SELECT.value;
 }
 
 // Select or deselect a seat
@@ -84,16 +158,14 @@ function selectSeat (event) {
     // Check if a free seat was clicked
     if (event.target.classList.contains('seat') &&
     !event.target.classList.contains('occupied')) {
-        //console.log(event.target);
-
-        //event.target.classList.add    <-- to add a Clas
-        //event.target.classList.remove <-- to remove a Class
         
         // Remove if exists a class or add it if it doesnt exists
         event.target.classList.toggle('selected');
 
         // Update total seats selected and its price
         updatedSelectedCount();
+
+        updateMovieAndPrice();
     }
 }
 
@@ -102,9 +174,6 @@ function updatedSelectedCount () {
     // Get all selected seats (nodeList)
     const selectedSeats = document.querySelectorAll('.row .seat.selected');
     const selectedSeatsCount = selectedSeats.length;
-    
-    //console.log(selectedSeats);
-    //console.log(selectedSeatsCount);
 
     // Save selected seats
     saveSelectedSeatsAtLocalStorage(selectedSeats);
@@ -132,8 +201,6 @@ function saveSelectedSeatsAtLocalStorage (selectedSeats) {
         return [...SEATS].indexOf(seat);
     });
     
-    //console.log(seatsIndex);    // will return i.e. [0], [0, 1, 2], [7, 15, 38] ...
-
     /*
         Save seatsindex into local storage.
         We can see it at DevTools >> Application >> Local Storage
@@ -159,64 +226,7 @@ function saveCurrency (currencyIndex) {
 // Save currency exchange
 function saveCurrencyExchange () {
     
-    localStorage.setItem(CURRENCY_EXCHANGE_ARRAY, currencyExchangeArray);
-
-}
-
-// Get all data from LocalStorage and populate UI
-function populateUI () {
-    
-    updateSelectedSeats();
-
-    generateMovies();
-
-    updateSelectedCurrency();
-
-}
-
-function updateSelectedSeats() {
-    
-    // get Selected Seats from local storage
-    const selectedSeats = JSON.parse(localStorage.getItem(SELECTED_SEATS));
-
-    //console.log(selectedSeats);
-
-    // Populate selected seats
-    if (selectedSeats !== null && selectedSeats.length > 0) {
-        SEATS.forEach((seat, index) => {
-            // Check if the index is in selected seats
-            if (selectedSeats.indexOf(index) > -1) {
-                seat.classList.add('selected');
-            }
-        });
-    }
-
-}
-
-// Create movie selector
-function generateMovies() {
-    
-    fetch('./files/movies.json')
-        .then((response) => {
-            response.json()
-                .then((movies) => {
-                    
-                    movies.forEach((movie, index) => {
-
-                        var movieOption = document.createElement("option");
-
-                        movieOption.value = movie.priceEur;
-                        movieOption.innerHTML = `${movie.name} (<span id="price">${movie.priceEur}</span> <span id="currency">${CURRENCY_SELECT.value}</span>)`;
-
-                        MOVIE_SELECT.appendChild(movieOption);
-
-                    });
-
-                    updateMovieAndPrice();
-
-                    //console.log(movies);
-                });
-        });
+    localStorage.setItem(CURRENCY_EXCHANGE_ARRAY, JSON.stringify(currencyExchangeArray));
 
 }
 
@@ -228,6 +238,7 @@ function updateMovieAndPrice() {
 
 }
 
+// set Movie from Local Storage
 function setMovie() {
     
     // Set selected Movie from Local Storage
@@ -235,37 +246,25 @@ function setMovie() {
 
     if (selectedMovieIndex !== null) {
         MOVIE_SELECT.selectedIndex = selectedMovieIndex;
-        ticketPrice = parseInt(MOVIE_SELECT.value);
     }
 
 }
 
+// set TicketPrice from LocalStorage or selected Movie
 function setPrice() {
     
     // Get movie price
-    const selectedMoviePrice = localStorage.getItem(SELECTED_MOVIE_PRICE) ? 
-                                    parseInt(localStorage.getItem(SELECTED_MOVIE_PRICE)) 
-                                    : parseInt(MOVIE_SELECT.value);
+    const selectedMoviePrice = localStorage.getItem(SELECTED_MOVIE_PRICE);
 
     if (selectedMoviePrice !== null) {
-        ticketPrice = selectedMoviePrice;
+        ticketPrice = (parseInt(selectedMoviePrice) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
+    } else {
+        ticketPrice = (parseInt(MOVIE_SELECT.value) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
     }
 
     // Recalculate total price and selected seats
     updatedSelectedCount();
 
-}
-
-function updateSelectedCurrency() {
-    
-    // Set selected Currency from Local Storage
-    const selectedCurrency = localStorage.getItem(SELECTED_CURRENCY);
-
-    if (selectedCurrency !== null) {
-        CURRENCY_SELECT.selectedIndex = selectedCurrency;
-    }
-
-    updateTotalCurrency();
 }
 
 // Set Currency and price for all movies
@@ -278,9 +277,11 @@ function updateMovieOptions() {
             var optionSpans = option.childNodes;
 
             optionSpans.forEach((span) => {
+                // Check if node is an HTML Element
                 if (span.nodeType === ELEMENT_NODE) {
                     switch (span.id) {
                         case "price":
+                            span.innerText = (parseInt(option.value) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
                             break;
                         case "currency":
                             span.innerText = CURRENCY_SELECT.value;
@@ -293,12 +294,6 @@ function updateMovieOptions() {
         }
     });
     
-    updateTotalCurrency();
-
-}
-
-function updateTotalCurrency() {
-    CURRENCY_TOTAL.innerText = CURRENCY_SELECT.value;
 }
 
 
@@ -311,8 +306,6 @@ function updateTotalCurrency() {
     have to check if a seat was clicked
 */
 CONTAINER.addEventListener ('click', (event) => {
-    //console.log(event.target);
-    
     // Select or deselect a seat
     selectSeat(event);
 
@@ -321,10 +314,9 @@ CONTAINER.addEventListener ('click', (event) => {
 // Movie select event
 MOVIE_SELECT.addEventListener ('change', (event) => {
     // Update ticket price with selected movie price
-    ticketPrice = +event.target.value ;
+    ticketPrice = (parseInt(event.target.value) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
 
     // Save selected movie at Local Storage
-    // console.log(event.target.selectedIndex, event.target.value);
     saveMovieData(event.target.selectedIndex, event.target.value);
 
     // Update totals
@@ -335,6 +327,10 @@ MOVIE_SELECT.addEventListener ('change', (event) => {
 CURRENCY_SELECT.addEventListener('change', (event) => {
     
     updateMovieOptions();
+
+    updateTotalCurrency();
+
+    updateMovieAndPrice()
 
     saveCurrency(event.target.selectedIndex);
 
