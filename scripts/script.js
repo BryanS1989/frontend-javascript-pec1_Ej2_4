@@ -30,6 +30,36 @@ const CURRENCY_SELECT = document.getElementById('currency');
 
 const ELEMENT_NODE = 1;
 
+const MOVIES = [
+    {
+        "name": "Avengers: Endgame",
+        "priceEur": 10
+    },
+    {
+        "name": "Joker",
+        "priceEur": 12
+    },
+    {
+        "name": "Toy Story 4",
+        "priceEur": 8
+    },
+    {
+        "name": "The Lion King",
+        "priceEur": 9
+    },
+    {
+        "name": "Tenet",
+        "priceEur": 15
+    },
+    {
+        "name": "Harry Potter and the Deathly Hallows (Pt 1)",
+        "priceEur": 10
+    },
+    {
+        "name": "Harry Potter and the Deathly Hallows (Pt 2)",
+        "priceEur": 10
+    }
+];
 
 /***************************************************************/
 /*                      GLOBAL VARIABLES                       */
@@ -63,7 +93,7 @@ function getAllCurrenciesExchange() {
     currencyExchangeArray =  JSON.parse(localStorage.getItem(CURRENCY_EXCHANGE_ARRAY));
 
     if (currencyExchangeArray === null) {
-        fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${CURRENCY_SELECT.value}`)
+        fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/EUR`)
         .then((response) => {
             response.json()
                 .then((data)=>{
@@ -81,9 +111,9 @@ function populateUI () {
     
     updateSelectedSeats();
 
-    generateMovies();
-
     updateSelectedCurrency();
+
+    generateMovies();
 
 }
 
@@ -107,6 +137,25 @@ function updateSelectedSeats() {
 // Create movie selector
 function generateMovies() {
 
+    MOVIES.forEach((movie) => {
+
+        var movieOption = document.createElement("option");
+
+        movieOption.value = movie.priceEur;
+        movieOption.innerHTML = `${movie.name} 
+                                (<span id="price">
+                                    ${(parseInt(movie.priceEur) * currentExchange()).toFixed(2)}
+                                </span> 
+                                <span id="currency">
+                                    ${CURRENCY_SELECT.value}
+                                </span>)`;
+        
+        MOVIE_SELECT.appendChild(movieOption);
+        
+    });
+
+    updateMovieAndPrice();
+    /*
     fetch('./files/movies.json')
         .then((response) => {
             response.json()
@@ -135,6 +184,15 @@ function generateMovies() {
             );
         }
     );
+    */
+}
+
+function currentExchange(){
+    if (currencyExchangeArray !== null) {
+        return currencyExchangeArray[CURRENCY_SELECT.value];
+    } else {
+        return 1;
+    }
 }
 
 function updateSelectedCurrency() {
@@ -257,9 +315,9 @@ function setPrice() {
     const selectedMoviePrice = localStorage.getItem(SELECTED_MOVIE_PRICE);
 
     if (selectedMoviePrice !== null) {
-        ticketPrice = (parseInt(selectedMoviePrice) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
+        ticketPrice = (parseInt(selectedMoviePrice) * currentExchange()).toFixed(2);
     } else {
-        ticketPrice = (parseInt(MOVIE_SELECT.value) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
+        ticketPrice = (parseInt(MOVIE_SELECT.value) * currentExchange()).toFixed(2);
     }
 
     // Recalculate total price and selected seats
@@ -281,7 +339,7 @@ function updateMovieOptions() {
                 if (span.nodeType === ELEMENT_NODE) {
                     switch (span.id) {
                         case "price":
-                            span.innerText = (parseInt(option.value) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
+                            span.innerText = (parseInt(option.value) * currentExchange()).toFixed(2);
                             break;
                         case "currency":
                             span.innerText = CURRENCY_SELECT.value;
@@ -314,7 +372,7 @@ CONTAINER.addEventListener ('click', (event) => {
 // Movie select event
 MOVIE_SELECT.addEventListener ('change', (event) => {
     // Update ticket price with selected movie price
-    ticketPrice = (parseInt(event.target.value) * currencyExchangeArray[CURRENCY_SELECT.value]).toFixed(2);
+    ticketPrice = (parseInt(event.target.value) * currentExchange()).toFixed(2);
 
     // Save selected movie at Local Storage
     saveMovieData(event.target.selectedIndex, event.target.value);
